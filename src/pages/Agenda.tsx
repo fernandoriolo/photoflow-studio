@@ -4,21 +4,22 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { mockCalendarEvents } from '@/data/mockData';
-import { CalendarEvent } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import type { EventType } from '@/types/database';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Clock, MapPin, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const eventTypeLabels: Record<CalendarEvent['type'], string> = {
+const eventTypeLabels: Record<EventType, string> = {
   session: 'Sessão',
   meeting: 'Reunião',
   delivery: 'Entrega',
   other: 'Outro',
 };
 
-const eventTypeColors: Record<CalendarEvent['type'], string> = {
+const eventTypeColors: Record<EventType, string> = {
   session: 'bg-accent text-accent-foreground',
   meeting: 'bg-info text-info-foreground',
   delivery: 'bg-success text-success-foreground',
@@ -27,14 +28,29 @@ const eventTypeColors: Record<CalendarEvent['type'], string> = {
 
 export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const { data: calendarEvents = [], isLoading } = useCalendarEvents();
 
   const eventsOnDate = selectedDate
-    ? mockCalendarEvents.filter((event) =>
+    ? calendarEvents.filter((event) =>
         isSameDay(parseISO(event.date), selectedDate)
       )
     : [];
 
-  const datesWithEvents = mockCalendarEvents.map((event) => parseISO(event.date));
+  const datesWithEvents = calendarEvents.map((event) => parseISO(event.date));
+
+  if (isLoading) {
+    return (
+      <DashboardLayout
+        title="Agenda"
+        subtitle="Visualize seus compromissos e sessões"
+      >
+        <div className="grid gap-6 p-6 lg:grid-cols-[400px_1fr]">
+          <Skeleton className="h-[400px] rounded-xl" />
+          <Skeleton className="h-[400px] rounded-xl" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout
@@ -96,7 +112,7 @@ export default function Agenda() {
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary">
                       <span className="text-lg font-semibold text-foreground">
-                        {event.startTime?.split(':')[0] || '—'}
+                        {event.start_time?.split(':')[0] || '—'}
                       </span>
                     </div>
 
@@ -105,17 +121,17 @@ export default function Agenda() {
                         <h4 className="font-semibold text-foreground">
                           {event.title}
                         </h4>
-                        <Badge className={cn('shrink-0', eventTypeColors[event.type])}>
-                          {eventTypeLabels[event.type]}
+                        <Badge className={cn('shrink-0', eventTypeColors[event.type as EventType])}>
+                          {eventTypeLabels[event.type as EventType]}
                         </Badge>
                       </div>
 
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                        {event.startTime && (
+                        {event.start_time && (
                           <span className="flex items-center gap-1.5">
                             <Clock className="h-4 w-4" />
-                            {event.startTime}
-                            {event.endTime && ` - ${event.endTime}`}
+                            {event.start_time}
+                            {event.end_time && ` - ${event.end_time}`}
                           </span>
                         )}
 

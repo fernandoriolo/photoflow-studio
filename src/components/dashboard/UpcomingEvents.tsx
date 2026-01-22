@@ -1,4 +1,4 @@
-import { CalendarEvent } from '@/types';
+import type { CalendarEvent, EventType } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, MapPin } from 'lucide-react';
@@ -10,14 +10,14 @@ interface UpcomingEventsProps {
   events: CalendarEvent[];
 }
 
-const eventTypeLabels: Record<CalendarEvent['type'], string> = {
+const eventTypeLabels: Record<EventType, string> = {
   session: 'Sessão',
   meeting: 'Reunião',
   delivery: 'Entrega',
   other: 'Outro',
 };
 
-const eventTypeColors: Record<CalendarEvent['type'], string> = {
+const eventTypeColors: Record<EventType, string> = {
   session: 'bg-accent text-accent-foreground',
   meeting: 'bg-info text-info-foreground',
   delivery: 'bg-success text-success-foreground',
@@ -64,8 +64,8 @@ export function UpcomingEvents({ events }: UpcomingEventsProps) {
                 <h4 className="font-medium text-foreground leading-tight">
                   {event.title}
                 </h4>
-                <Badge className={cn('text-xs shrink-0', eventTypeColors[event.type])}>
-                  {eventTypeLabels[event.type]}
+                <Badge className={cn('text-xs shrink-0', eventTypeColors[event.type as EventType])}>
+                  {eventTypeLabels[event.type as EventType]}
                 </Badge>
               </div>
 
@@ -74,11 +74,11 @@ export function UpcomingEvents({ events }: UpcomingEventsProps) {
                   {getDateLabel(event.date)}
                 </span>
                 
-                {event.startTime && (
+                {event.start_time && (
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {event.startTime}
-                    {event.endTime && ` - ${event.endTime}`}
+                    {event.start_time}
+                    {event.end_time && ` - ${event.end_time}`}
                   </span>
                 )}
                 

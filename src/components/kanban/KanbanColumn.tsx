@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
+import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
-import { LeadStatus } from '@/types';
+import type { LeadStatus } from '@/types/database';
 
 interface KanbanColumnProps {
   status: LeadStatus;
@@ -18,6 +19,10 @@ const statusColors: Record<LeadStatus, string> = {
 };
 
 export function KanbanColumn({ status, title, count, totalValue, children }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+  });
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -26,7 +31,13 @@ export function KanbanColumn({ status, title, count, totalValue, children }: Kan
   };
 
   return (
-    <div className="flex h-full w-80 flex-shrink-0 flex-col rounded-xl bg-muted/30">
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex h-full w-80 flex-shrink-0 flex-col rounded-xl bg-muted/30 transition-colors duration-200',
+        isOver && 'bg-accent/10 ring-2 ring-accent/30'
+      )}
+    >
       {/* Column Header */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">

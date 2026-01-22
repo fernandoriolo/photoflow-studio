@@ -1,11 +1,12 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { mockQuotes } from '@/data/mockData';
+import { useQuotes } from '@/hooks/useQuotes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -28,6 +29,7 @@ import { useState } from 'react';
 
 export default function Orcamentos() {
   const [showForm, setShowForm] = useState(false);
+  const { data: quotes = [], isLoading } = useQuotes();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -35,6 +37,27 @@ export default function Orcamentos() {
       currency: 'BRL',
     }).format(value);
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout
+        title="Orçamentos"
+        subtitle="Crie e gerencie seus orçamentos"
+      >
+        <div className="space-y-6 p-6">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-10 w-36" />
+          </div>
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout
@@ -45,7 +68,7 @@ export default function Orcamentos() {
         {/* Header Actions */}
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {mockQuotes.length} orçamento(s) criado(s)
+            {quotes.length} orçamento(s) criado(s)
           </p>
           <Button className="gap-2" onClick={() => setShowForm(!showForm)}>
             <Plus className="h-4 w-4" />
@@ -165,7 +188,7 @@ export default function Orcamentos() {
 
         {/* Quotes List */}
         <div className="space-y-4">
-          {mockQuotes.map((quote) => (
+          {quotes.map((quote) => (
             <Card key={quote.id} className="border-0 shadow-soft">
               <CardContent className="p-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -175,22 +198,22 @@ export default function Orcamentos() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground">
-                        {quote.clientName}
+                        {quote.client_name}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {quote.eventType} •{' '}
-                        {quote.eventDate &&
-                          format(new Date(quote.eventDate), "dd 'de' MMMM 'de' yyyy", {
+                        {quote.event_type} •{' '}
+                        {quote.event_date &&
+                          format(new Date(quote.event_date), "dd 'de' MMMM 'de' yyyy", {
                             locale: ptBR,
                           })}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
                         <Badge variant="secondary">
-                          {quote.items.length} itens
+                          {quote.items?.length || 0} itens
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           Válido até{' '}
-                          {format(new Date(quote.validUntil), 'dd/MM/yyyy')}
+                          {format(new Date(quote.valid_until), 'dd/MM/yyyy')}
                         </span>
                       </div>
                     </div>
@@ -200,7 +223,7 @@ export default function Orcamentos() {
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">Valor Total</p>
                       <p className="text-xl font-display font-semibold text-foreground">
-                        {formatCurrency(quote.totalValue)}
+                        {formatCurrency(quote.total_value)}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -219,6 +242,20 @@ export default function Orcamentos() {
             </Card>
           ))}
         </div>
+
+        {quotes.length === 0 && !showForm && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+              <FileText className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">
+              Nenhum orçamento criado
+            </h3>
+            <p className="mt-1 text-muted-foreground">
+              Crie seu primeiro orçamento clicando no botão acima
+            </p>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

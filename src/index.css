@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,104 +6,109 @@
 
 @layer base {
   :root {
-    /* Premium Photography Studio Palette - Warm Neutral */
-    --background: 40 20% 98%;
-    --foreground: 30 10% 15%;
+    /* Paleta: Dourado #C9B37A | Grafite #2F3437 | Off-white #F4F2ED */
+    
+    --background: 43 27% 95%; /* Off-white */
+    --foreground: 200 7% 20%; /* Grafite */
 
     --card: 0 0% 100%;
-    --card-foreground: 30 10% 15%;
+    --card-foreground: 200 7% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 30 10% 15%;
+    --popover-foreground: 200 7% 20%;
 
-    --primary: 30 30% 25%;
-    --primary-foreground: 40 20% 98%;
+    --primary: 43 38% 63%; /* Dourado */
+    --primary-foreground: 200 7% 15%;
 
-    --secondary: 35 15% 93%;
-    --secondary-foreground: 30 10% 25%;
+    --secondary: 43 20% 90%;
+    --secondary-foreground: 200 7% 25%;
 
-    --muted: 35 10% 94%;
-    --muted-foreground: 30 8% 50%;
+    --muted: 43 15% 92%;
+    --muted-foreground: 200 5% 45%;
 
-    --accent: 25 60% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 43 38% 63%; /* Dourado */
+    --accent-foreground: 200 7% 15%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 35 15% 88%;
-    --input: 35 15% 88%;
-    --ring: 30 30% 25%;
+    --border: 43 15% 85%;
+    --input: 43 15% 85%;
+    --ring: 43 38% 63%;
 
     --radius: 0.625rem;
 
-    /* Sidebar Premium */
-    --sidebar-background: 30 15% 12%;
-    --sidebar-foreground: 35 15% 85%;
-    --sidebar-primary: 25 60% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 12% 18%;
-    --sidebar-accent-foreground: 35 15% 90%;
-    --sidebar-border: 30 10% 20%;
-    --sidebar-ring: 25 60% 55%;
+    /* Sidebar - Grafite */
+    --sidebar-background: 200 7% 13%;
+    --sidebar-foreground: 43 20% 90%;
+    --sidebar-primary: 43 38% 63%; /* Dourado */
+    --sidebar-primary-foreground: 200 7% 15%;
+    --sidebar-accent: 200 7% 18%;
+    --sidebar-accent-foreground: 43 20% 95%;
+    --sidebar-border: 200 7% 22%;
+    --sidebar-ring: 43 38% 63%;
 
-    /* Custom Semantic Colors */
-    --success: 145 65% 42%;
+    /* Semantic Colors */
+    --success: 145 55% 42%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 30 10% 15%;
-    --info: 210 80% 55%;
+    --warning: 43 80% 50%;
+    --warning-foreground: 200 7% 15%;
+    --info: 210 70% 55%;
     --info-foreground: 0 0% 100%;
 
     /* Kanban Pipeline Colors */
-    --pipeline-new: 210 80% 55%;
-    --pipeline-negotiation: 38 92% 50%;
-    --pipeline-sent: 280 60% 55%;
-    --pipeline-closed: 145 65% 42%;
+    --pipeline-new: 210 70% 55%;
+    --pipeline-negotiation: 43 80% 50%;
+    --pipeline-sent: 280 50% 55%;
+    --pipeline-closed: 145 55% 42%;
 
     /* Premium Shadows */
-    --shadow-soft: 0 2px 8px -2px hsl(30 10% 15% / 0.08);
-    --shadow-medium: 0 8px 24px -4px hsl(30 10% 15% / 0.12);
-    --shadow-elevated: 0 20px 40px -8px hsl(30 10% 15% / 0.16);
+    --shadow-soft: 0 2px 8px -2px hsl(200 7% 20% / 0.08);
+    --shadow-medium: 0 8px 24px -4px hsl(200 7% 20% / 0.12);
+    --shadow-elevated: 0 20px 40px -8px hsl(200 7% 20% / 0.16);
   }
 
   .dark {
-    --background: 30 10% 8%;
-    --foreground: 35 15% 92%;
+    --background: 200 7% 10%; /* Grafite escuro */
+    --foreground: 43 20% 92%;
 
-    --card: 30 10% 12%;
-    --card-foreground: 35 15% 92%;
+    --card: 200 7% 13%;
+    --card-foreground: 43 20% 92%;
 
-    --popover: 30 10% 12%;
-    --popover-foreground: 35 15% 92%;
+    --popover: 200 7% 13%;
+    --popover-foreground: 43 20% 92%;
 
-    --primary: 35 15% 92%;
-    --primary-foreground: 30 10% 12%;
+    --primary: 43 38% 63%; /* Dourado */
+    --primary-foreground: 200 7% 10%;
 
-    --secondary: 30 10% 18%;
-    --secondary-foreground: 35 15% 85%;
+    --secondary: 200 7% 18%;
+    --secondary-foreground: 43 20% 85%;
 
-    --muted: 30 10% 18%;
-    --muted-foreground: 35 10% 55%;
+    --muted: 200 7% 18%;
+    --muted-foreground: 43 15% 55%;
 
-    --accent: 25 60% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 43 38% 63%; /* Dourado */
+    --accent-foreground: 200 7% 10%;
 
-    --destructive: 0 62% 45%;
+    --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 10% 20%;
-    --input: 30 10% 20%;
-    --ring: 35 15% 75%;
+    --border: 200 7% 22%;
+    --input: 200 7% 22%;
+    --ring: 43 38% 63%;
 
-    --sidebar-background: 30 12% 6%;
-    --sidebar-foreground: 35 15% 85%;
-    --sidebar-primary: 25 60% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 12% 12%;
-    --sidebar-accent-foreground: 35 15% 90%;
-    --sidebar-border: 30 10% 15%;
-    --sidebar-ring: 25 60% 55%;
+    --sidebar-background: 200 7% 8%;
+    --sidebar-foreground: 43 20% 85%;
+    --sidebar-primary: 43 38% 63%;
+    --sidebar-primary-foreground: 200 7% 10%;
+    --sidebar-accent: 200 7% 15%;
+    --sidebar-accent-foreground: 43 20% 90%;
+    --sidebar-border: 200 7% 18%;
+    --sidebar-ring: 43 38% 63%;
+
+    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-medium: 0 8px 24px -4px hsl(0 0% 0% / 0.4);
+    --shadow-elevated: 0 20px 40px -8px hsl(0 0% 0% / 0.5);
   }
 }
 
@@ -118,14 +123,14 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
-    @apply tracking-tight;
+    font-family: 'Inter', system-ui, sans-serif;
+    @apply tracking-tight font-semibold;
   }
 }
 
 @layer utilities {
   .font-display {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   .font-body {

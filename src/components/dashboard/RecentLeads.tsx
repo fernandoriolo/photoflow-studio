@@ -1,4 +1,4 @@
-import { Lead } from '@/types';
+import type { Lead, LeadStatus } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -13,14 +13,14 @@ interface RecentLeadsProps {
   leads: Lead[];
 }
 
-const statusLabels: Record<Lead['status'], string> = {
+const statusLabels: Record<LeadStatus, string> = {
   new: 'Novo',
   negotiation: 'Negociação',
   sent: 'Enviado',
   closed: 'Fechado',
 };
 
-const statusColors: Record<Lead['status'], string> = {
+const statusColors: Record<LeadStatus, string> = {
   new: 'bg-pipeline-new/10 text-pipeline-new border-pipeline-new/20',
   negotiation: 'bg-pipeline-negotiation/10 text-pipeline-negotiation border-pipeline-negotiation/20',
   sent: 'bg-pipeline-sent/10 text-pipeline-sent border-pipeline-sent/20',
@@ -38,7 +38,7 @@ export function RecentLeads({ leads }: RecentLeadsProps) {
   };
 
   const sortedLeads = [...leads].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
   );
 
   return (
@@ -74,13 +74,13 @@ export function RecentLeads({ leads }: RecentLeadsProps) {
                 </h4>
                 <Badge
                   variant="outline"
-                  className={cn('text-xs shrink-0 border', statusColors[lead.status])}
+                  className={cn('text-xs shrink-0 border', statusColors[lead.status as LeadStatus])}
                 >
-                  {statusLabels[lead.status]}
+                  {statusLabels[lead.status as LeadStatus]}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground truncate">
-                {lead.eventType}
+                {lead.event_type}
               </p>
             </div>
 
@@ -93,12 +93,14 @@ export function RecentLeads({ leads }: RecentLeadsProps) {
                   }).format(lead.value)}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(lead.createdAt), {
-                  addSuffix: true,
-                  locale: ptBR,
-                })}
-              </p>
+              {lead.created_at && (
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(lead.created_at), {
+                    addSuffix: true,
+                    locale: ptBR,
+                  })}
+                </p>
+              )}
             </div>
           </div>
         ))}
