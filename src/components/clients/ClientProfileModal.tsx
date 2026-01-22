@@ -28,6 +28,7 @@ import { format, parseISO, isPast, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { NewProjectModal } from '@/components/projects/NewProjectModal';
+import { PhotoUpload } from '@/components/projects/PhotoUpload';
 
 interface ClientProfileModalProps {
   client: Client | null;
@@ -55,6 +56,7 @@ export function ClientProfileModal({ client, open, onClose }: ClientProfileModal
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [selectedProjectForPhotos, setSelectedProjectForPhotos] = useState<Project | null>(null);
 
   useEffect(() => {
     if (client && open) {
@@ -227,8 +229,9 @@ export function ClientProfileModal({ client, open, onClose }: ClientProfileModal
 
             {/* Tabs */}
             <Tabs defaultValue="projects" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="projects">Projetos</TabsTrigger>
+                <TabsTrigger value="photos">Fotos</TabsTrigger>
                 <TabsTrigger value="events">Agenda</TabsTrigger>
               </TabsList>
 
@@ -289,6 +292,61 @@ export function ClientProfileModal({ client, open, onClose }: ClientProfileModal
                     <Camera className="h-10 w-10 mx-auto mb-3 opacity-50" />
                     <p>Nenhum projeto registrado</p>
                     <p className="text-sm mt-1">Clique no botão acima para criar o primeiro projeto</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="photos" className="mt-4">
+                {projects.length > 0 ? (
+                  <div className="space-y-4">
+                    {!selectedProjectForPhotos ? (
+                      <>
+                        <p className="text-sm text-muted-foreground">
+                          Selecione um projeto para gerenciar as fotos:
+                        </p>
+                        <div className="grid gap-2">
+                          {projects.map((project) => (
+                            <Button
+                              key={project.id}
+                              variant="outline"
+                              className="justify-start h-auto py-3"
+                              onClick={() => setSelectedProjectForPhotos(project)}
+                            >
+                              <Camera className="h-4 w-4 mr-2" />
+                              <div className="text-left">
+                                <p className="font-medium">{project.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(project.event_date), "dd/MM/yyyy")} - {project.event_type}
+                                </p>
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedProjectForPhotos(null)}
+                          >
+                            ← Voltar
+                          </Button>
+                          <span className="font-medium">{selectedProjectForPhotos.title}</span>
+                        </div>
+                        <PhotoUpload
+                          projectId={selectedProjectForPhotos.id}
+                          projectTitle={selectedProjectForPhotos.title}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <Camera className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p>Nenhum projeto registrado</p>
+                    <p className="text-sm mt-1">Crie um projeto primeiro para adicionar fotos</p>
                   </div>
                 )}
               </TabsContent>

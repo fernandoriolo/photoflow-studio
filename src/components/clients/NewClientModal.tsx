@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCreateClient } from '@/hooks/useClients';
+import { supabase } from '@/lib/supabase';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, UserPlus, Key } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NewClientModalProps {
@@ -27,16 +29,26 @@ export function NewClientModal({ open, onClose, onSuccess }: NewClientModalProps
     name: '',
     email: '',
     phone: '',
+    createLogin: false,
+    password: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Limpar erro ao digitar
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, createLogin: checked }));
+    if (!checked) {
+      setFormData((prev) => ({ ...prev, password: '' }));
+      setErrors((prev) => ({ ...prev, password: '' }));
     }
   };
 
@@ -52,6 +64,14 @@ export function NewClientModal({ open, onClose, onSuccess }: NewClientModalProps
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido';
     }
+
+    if (formData.createLogin) {
+      if (!formData.password.trim()) {
+        newErrors.password = 'Senha é obrigatória';
+      } else if (formData.password.length < 6) {
+        newErrors.password = 'Senha deve ter no mínimo 6 caracteres';
+      }
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -62,24 +82,95 @@ export function NewClientModal({ open, onClose, onSuccess }: NewClientModalProps
     
     if (!validate()) return;
 
+    setIsSubmitting(true);
+
     try {
+      let authUserId: string | null = null;
+
+      // Se criar login, primeiro cria o usuário no auth
+      if (formData.createLogin) {
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: formData.email.trim(),
+          password: formData.password,
+          email_confirm: true,
+          user_metadata: {
+            name: formData.name.trim(),
+            role: 'cliente',
+          },
+        });
+
+        if (authError) {
+          // Se falhar com admin, tentar com signUp normal (precisa de confirmação de email)
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: formData.email.trim(),
+            password: formData.password,
+            options: {
+              data: {
+                name: formData.name.trim(),
+                role: 'cliente',
+              },
+            },
+          });
+
+          if (signUpError) {
+            throw new Error(`Erro ao criar login: ${signUpError.message}`);
+          }
+
+          authUserId = signUpData.user?.id || null;
+          
+          if (authUserId) {
+            // Criar perfil do cliente
+            await supabase.from('profiles').upsert({
+              id: authUserId,
+              email: formData.email.trim(),
+              name: formData.name.trim(),
+              role: 'cliente',
+            });
+          }
+        } else {
+          authUserId = authData.user?.id || null;
+          
+          if (authUserId) {
+            // Criar perfil do cliente
+            await supabase.from('profiles').upsert({
+              id: authUserId,
+              email: formData.email.trim(),
+              name: formData.name.trim(),
+              role: 'cliente',
+            });
+          }
+        }
+      }
+
+      // Criar o cliente na tabela clients
       await createClient.mutateAsync({
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || null,
+        auth_user_id: authUserId,
       });
       
-      toast.success('Cliente criado com sucesso!');
+      if (formData.createLogin) {
+        toast.success('Cliente criado com acesso ao sistema!', {
+          description: `Email: ${formData.email} | Senha: ${formData.password}`,
+          duration: 10000,
+        });
+      } else {
+        toast.success('Cliente criado com sucesso!');
+      }
+      
       handleClose();
       onSuccess?.();
     } catch (error) {
       console.error('Erro ao criar cliente:', error);
-      toast.error('Erro ao criar cliente. Tente novamente.');
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar cliente. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    setFormData({ name: '', email: '', phone: '' });
+    setFormData({ name: '', email: '', phone: '', createLogin: false, password: '' });
     setErrors({});
     onClose();
   };
@@ -141,12 +232,50 @@ export function NewClientModal({ open, onClose, onSuccess }: NewClientModalProps
             />
           </div>
 
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="createLogin" className="flex items-center gap-2">
+                <Key className="h-4 w-4" />
+                Criar acesso ao sistema
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Permite que o cliente acesse a galeria de fotos
+              </p>
+            </div>
+            <Switch
+              id="createLogin"
+              checked={formData.createLogin}
+              onCheckedChange={handleSwitchChange}
+            />
+          </div>
+
+          {formData.createLogin && (
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha *</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={formData.password}
+                onChange={handleChange}
+                className={errors.password ? 'border-destructive' : ''}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                O cliente usará este email e senha para acessar suas fotos
+              </p>
+            </div>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createClient.isPending}>
-              {createClient.isPending ? (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Salvando...
@@ -161,4 +290,3 @@ export function NewClientModal({ open, onClose, onSuccess }: NewClientModalProps
     </Dialog>
   );
 }
-

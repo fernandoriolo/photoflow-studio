@@ -100,6 +100,7 @@ export type Database = {
       clients: {
         Row: {
           avatar_url: string | null
+          auth_user_id: string | null
           created_at: string | null
           email: string
           id: string
@@ -108,6 +109,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          auth_user_id?: string | null
           created_at?: string | null
           email: string
           id?: string
@@ -116,6 +118,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          auth_user_id?: string | null
           created_at?: string | null
           email?: string
           id?: string
@@ -223,6 +226,7 @@ export type Database = {
           id: string
           location: string | null
           package_limit: number
+          price_per_extra_photo: number | null
           selected_photos: number | null
           status: string
           title: string
@@ -237,6 +241,7 @@ export type Database = {
           id?: string
           location?: string | null
           package_limit?: number
+          price_per_extra_photo?: number | null
           selected_photos?: number | null
           status?: string
           title: string
@@ -251,6 +256,7 @@ export type Database = {
           id?: string
           location?: string | null
           package_limit?: number
+          price_per_extra_photo?: number | null
           selected_photos?: number | null
           status?: string
           title?: string

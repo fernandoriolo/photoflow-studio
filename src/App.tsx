@@ -13,6 +13,8 @@ import Clientes from "./pages/Clientes";
 import Orcamentos from "./pages/Orcamentos";
 import Galerias from "./pages/Galerias";
 import Financas from "./pages/Financas";
+import ClienteGaleria from "./pages/ClienteGaleria";
+import ClienteDetalhe from "./pages/ClienteDetalhe";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -64,6 +66,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/clientes/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'atendente']}>
+                    <ClienteDetalhe />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/orcamentos"
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'atendente']}>
@@ -82,12 +92,22 @@ const App = () => (
                 }
               />
 
-              {/* Galerias - Todos os usuários autenticados */}
+              {/* Galerias - Admin e Atendente */}
               <Route
                 path="/galerias"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'atendente', 'cliente']}>
+                  <ProtectedRoute allowedRoles={['admin', 'atendente']}>
                     <Galerias />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Galeria do Cliente - Apenas Cliente */}
+              <Route
+                path="/minhas-fotos"
+                element={
+                  <ProtectedRoute allowedRoles={['cliente']}>
+                    <ClienteGaleria />
                   </ProtectedRoute>
                 }
               />

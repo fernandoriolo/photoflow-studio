@@ -23,10 +23,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   
   const isFetchingProfile = useRef(false);
-  const isInitialized = useRef(false);
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
-    if (isFetchingProfile.current) return profile; // retorna o atual se já está buscando
+    if (isFetchingProfile.current) return profile;
     isFetchingProfile.current = true;
     
     try {
@@ -52,58 +51,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Prevenir dupla inicialização no Strict Mode
-    if (isInitialized.current) return;
-    isInitialized.current = true;
-    
     let mounted = true;
+    let initialized = false;
 
-    // Listener para mudanças de auth
+    const handleSession = async (currentSession: Session | null) => {
+      if (!mounted || initialized) return;
+      initialized = true;
+      
+      if (currentSession?.user) {
+        setSession(currentSession);
+        setUser(currentSession.user);
+        const profileData = await fetchProfile(currentSession.user.id);
+        if (mounted) setProfile(profileData);
+      } else {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      }
+      
+      if (mounted) setIsLoading(false);
+    };
+
+    // Listener para eventos de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log('Auth event:', event);
         
         if (!mounted) return;
 
+        // Qualquer evento com sessão inicializa o app
+        if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !initialized) {
+          await handleSession(newSession);
+          return;
+        }
+
         if (event === 'SIGNED_OUT') {
+          initialized = false; // Permitir reinicialização após logout
           setUser(null);
           setProfile(null);
           setSession(null);
           setIsLoading(false);
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-          if (newSession?.user) {
-            setSession(newSession);
-            setUser(newSession.user);
-            
-            // Buscar perfil
-            const profileData = await fetchProfile(newSession.user.id);
-            if (mounted) {
-              setProfile(profileData);
-              setIsLoading(false);
-            }
-          } else {
-            // INITIAL_SESSION sem usuário = não logado
-            setIsLoading(false);
-          }
+        } else if (event === 'TOKEN_REFRESHED' && newSession) {
+          setSession(newSession);
         }
       }
     );
 
-    // Fallback: se nenhum evento disparar em 3s, para o loading
+    // Fallback: se nenhum evento disparar em 3s, assume não logado
     const timeout = setTimeout(() => {
-      if (mounted && isLoading) {
-        console.warn('Auth timeout - verificando sessão manualmente');
-        supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-          if (!mounted) return;
-          
-          if (currentSession?.user) {
-            setSession(currentSession);
-            setUser(currentSession.user);
-            const profileData = await fetchProfile(currentSession.user.id);
-            if (mounted) setProfile(profileData);
-          }
-          if (mounted) setIsLoading(false);
-        });
+      if (mounted && !initialized) {
+        console.warn('Fallback: nenhum evento recebido, assumindo não logado');
+        initialized = true;
+        setIsLoading(false);
       }
     }, 3000);
 

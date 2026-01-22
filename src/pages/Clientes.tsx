@@ -2,40 +2,23 @@ import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useClients } from '@/hooks/useClients';
 import { useProjects } from '@/hooks/useProjects';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Mail, Phone, Plus, Search, MoreHorizontal, Eye, Edit, Camera } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Plus, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { ClientProfileModal } from '@/components/clients/ClientProfileModal';
 import { NewClientModal } from '@/components/clients/NewClientModal';
-import type { Client } from '@/types/database';
+import { ClientCard } from '@/components/clients/ClientCard';
 
 export default function Clientes() {
   const { data: clients = [], isLoading, error: clientsError } = useClients();
   const { data: projects = [], error: projectsError } = useProjects();
 
-  // Log de erros para debug
   if (clientsError) console.error('Erro ao carregar clientes:', clientsError);
   if (projectsError) console.error('Erro ao carregar projetos:', projectsError);
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
 
-  // Filtrar clientes pela busca
   const filteredClients = useMemo(() => {
     if (!searchQuery.trim()) return clients;
     const query = searchQuery.toLowerCase();
@@ -47,7 +30,6 @@ export default function Clientes() {
     );
   }, [clients, searchQuery]);
 
-  // Contar projetos por cliente
   const projectCountByClient = useMemo(() => {
     const counts: Record<string, number> = {};
     projects.forEach((project) => {
@@ -57,25 +39,6 @@ export default function Clientes() {
     });
     return counts;
   }, [projects]);
-
-  const handleViewProfile = (client: Client) => {
-    setSelectedClient(client);
-    setIsProfileModalOpen(true);
-  };
-
-  const handleCloseProfile = () => {
-    setIsProfileModalOpen(false);
-    setSelectedClient(null);
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   if (isLoading && !clientsError) {
     return (
@@ -124,85 +87,11 @@ export default function Clientes() {
         {/* Clients Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredClients.map((client) => (
-            <Card
+            <ClientCard
               key={client.id}
-              className="border-0 shadow-soft transition-all hover:shadow-medium"
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-14 w-14 border-2 border-border">
-                      <AvatarImage src={client.avatar_url || undefined} />
-                      <AvatarFallback className="bg-secondary text-lg font-medium text-secondary-foreground">
-                        {getInitials(client.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold text-foreground">
-                        {client.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Cliente desde{' '}
-                        {client.created_at && format(new Date(client.created_at), "MMM 'de' yyyy", {
-                          locale: ptBR,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewProfile(client)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver perfil
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleViewProfile(client)}>
-                        <Camera className="h-4 w-4 mr-2" />
-                        Ver projetos
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span className="truncate">{client.email}</span>
-                  </div>
-                  {client.phone && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      <span>{client.phone}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="secondary">
-                      {projectCountByClient[client.id] || 0} projeto{(projectCountByClient[client.id] || 0) !== 1 ? 's' : ''}
-                    </Badge>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleViewProfile(client)}
-                    >
-                      Ver detalhes
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              client={client}
+              projectCount={projectCountByClient[client.id] || 0}
+            />
           ))}
         </div>
 
@@ -234,13 +123,6 @@ export default function Clientes() {
           </div>
         )}
       </div>
-
-      {/* Modal de Perfil do Cliente */}
-      <ClientProfileModal
-        client={selectedClient}
-        open={isProfileModalOpen}
-        onClose={handleCloseProfile}
-      />
 
       {/* Modal de Novo Cliente */}
       <NewClientModal
