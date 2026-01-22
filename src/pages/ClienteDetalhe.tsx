@@ -186,6 +186,12 @@ export default function ClienteDetalhe() {
     try {
       await updateProject.mutateAsync({ id: project.id, status: newStatus });
       toast.success('Status atualizado!');
+      
+      // Atualizar o selectedProject localmente para refletir a mudança
+      if (selectedProject && selectedProject.id === project.id) {
+        setSelectedProject(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+      
       refetchProjects();
     } catch (error) {
       toast.error('Erro ao atualizar status');
@@ -196,6 +202,18 @@ export default function ClienteDetalhe() {
     try {
       await updateProject.mutateAsync({ id: project.id, price_per_extra_photo: newPrice });
       toast.success('Preço atualizado!');
+      
+      // Atualizar o selectedProject localmente
+      if (selectedProject && selectedProject.id === project.id) {
+        const extraPhotos = Math.max(0, selectedProject.selectedCount - selectedProject.package_limit);
+        const extraValue = extraPhotos * newPrice;
+        setSelectedProject(prev => prev ? { 
+          ...prev, 
+          price_per_extra_photo: newPrice,
+          extraValue: extraValue
+        } : null);
+      }
+      
       refetchProjects();
     } catch (error) {
       toast.error('Erro ao atualizar preço');

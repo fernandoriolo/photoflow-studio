@@ -29,7 +29,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   if (allowedRoles && profile) {
     if (!allowedRoles.includes(profile.role)) {
       if (profile.role === 'cliente') {
-        return <Navigate to="/minhas-fotos" replace />;
+        return <Navigate to="/galerias" replace />;
       }
       return <Navigate to="/" replace />;
     }

@@ -4,6 +4,7 @@ import { useCreateAlbum, useAlbums } from '@/hooks/usePhotos';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import { 
   Upload, 
   X, 
@@ -13,6 +14,8 @@ import {
   Loader2,
   Heart,
   CheckCircle,
+  Sparkles,
+  Shield,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -31,6 +34,7 @@ export function PhotoUpload({ projectId, projectTitle }: PhotoUploadProps) {
   
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   // Pegar ou criar album principal do projeto
@@ -98,22 +102,36 @@ export function PhotoUpload({ projectId, projectTitle }: PhotoUploadProps) {
     try {
       const albumId = await getOrCreateAlbum();
       
-      setUploadProgress(10);
+      setUploadProgress(5);
+      setUploadStatus('Iniciando...');
       
       await uploadPhotos.mutateAsync({
         albumId,
         files: selectedFiles,
+        onProgress: (current, total, status) => {
+          // Calcular progresso entre 5% e 95%
+          const progress = 5 + ((current / total) * 90);
+          setUploadProgress(Math.round(progress));
+          setUploadStatus(status);
+        },
       });
 
       setUploadProgress(100);
-      toast.success(`${selectedFiles.length} foto(s) enviada(s) com sucesso!`);
+      setUploadStatus('Concluído!');
+      toast.success(`${selectedFiles.length} foto(s) enviada(s) com sucesso!`, {
+        description: 'Imagens convertidas para WebP com marca d\'água',
+      });
       setSelectedFiles([]);
       
-      setTimeout(() => setUploadProgress(0), 1000);
+      setTimeout(() => {
+        setUploadProgress(0);
+        setUploadStatus('');
+      }, 1500);
     } catch (error) {
       console.error('Erro no upload:', error);
       toast.error('Erro ao enviar fotos. Tente novamente.');
       setUploadProgress(0);
+      setUploadStatus('');
     }
   };
 
@@ -165,6 +183,16 @@ export function PhotoUpload({ projectId, projectTitle }: PhotoUploadProps) {
               <p className="text-sm text-muted-foreground mt-1">
                 Formatos aceitos: JPG, PNG, WebP, GIF (máx. 50MB cada)
               </p>
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <Badge variant="secondary" className="gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Conversão WebP
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <Shield className="h-3 w-3" />
+                  Marca d'água
+                </Badge>
+              </div>
             </div>
           </div>
 
@@ -195,7 +223,14 @@ export function PhotoUpload({ projectId, projectTitle }: PhotoUploadProps) {
               </div>
 
               {uploadProgress > 0 && (
-                <Progress value={uploadProgress} className="h-2" />
+                <div className="space-y-2">
+                  <Progress value={uploadProgress} className="h-2" />
+                  {uploadStatus && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      {uploadStatus}
+                    </p>
+                  )}
+                </div>
               )}
 
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">

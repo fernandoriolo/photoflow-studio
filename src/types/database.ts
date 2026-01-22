@@ -181,6 +181,7 @@ export type Database = {
           sort_order: number | null
           thumbnail_url: string
           url: string
+          original_url: string | null
         }
         Insert: {
           album_id?: string | null
@@ -193,6 +194,7 @@ export type Database = {
           sort_order?: number | null
           thumbnail_url: string
           url: string
+          original_url?: string | null
         }
         Update: {
           album_id?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           sort_order?: number | null
           thumbnail_url?: string
           url?: string
+          original_url?: string | null
         }
         Relationships: [
           {

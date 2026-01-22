@@ -21,6 +21,10 @@ import {
   Camera,
   Calendar,
   DollarSign,
+  Lock,
+  Clock,
+  CheckCircle,
+  Pencil,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -72,8 +76,43 @@ export default function ClienteGaleria() {
 
   const PRICE_PER_EXTRA_PHOTO = 50; // Preço por foto extra
 
+  // Labels e cores de status para o cliente
+  const statusLabels: Record<string, string> = {
+    scheduled: 'Aguardando seleção',
+    in_progress: 'Em produção',
+    editing: 'Em edição',
+    delivered: 'Entregue',
+  };
+
+  const statusColors: Record<string, string> = {
+    scheduled: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+    in_progress: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
+    editing: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+    delivered: 'bg-green-500/10 text-green-600 border-green-500/30',
+  };
+
+  const statusIcons: Record<string, React.ReactNode> = {
+    scheduled: <Pencil className="h-4 w-4" />,
+    in_progress: <Clock className="h-4 w-4" />,
+    editing: <Camera className="h-4 w-4" />,
+    delivered: <CheckCircle className="h-4 w-4" />,
+  };
+
+  // Verificar se o projeto permite edição de seleção
+  const canEditSelection = (project: ProjectWithPhotos) => {
+    return project.status === 'scheduled';
+  };
+
   // Manipuladores
   const handleToggleSelection = async (photo: Photo, project: ProjectWithPhotos) => {
+    // Bloquear se o projeto não permitir edição
+    if (!canEditSelection(project)) {
+      toast.error('Seleção bloqueada', {
+        description: 'Este projeto já está em produção e não permite mais alterações.',
+      });
+      return;
+    }
+
     const isSelecting = !photo.is_selected;
     
     // Atualização otimista - atualiza imediatamente a UI
@@ -313,6 +352,29 @@ export default function ClienteGaleria() {
               </Card>
             </div>
 
+            {/* Status do projeto */}
+            <div className={cn(
+              "flex items-center gap-3 p-4 rounded-lg border",
+              statusColors[selectedProject.status] || statusColors.scheduled
+            )}>
+              {statusIcons[selectedProject.status] || statusIcons.scheduled}
+              <div className="flex-1">
+                <p className="font-medium">{statusLabels[selectedProject.status] || 'Status desconhecido'}</p>
+                {canEditSelection(selectedProject) ? (
+                  <p className="text-sm opacity-80">
+                    Selecione suas fotos favoritas. Você pode alterar a seleção a qualquer momento.
+                  </p>
+                ) : (
+                  <p className="text-sm opacity-80">
+                    Suas fotos estão sendo processadas. A seleção não pode mais ser alterada.
+                  </p>
+                )}
+              </div>
+              {!canEditSelection(selectedProject) && (
+                <Lock className="h-5 w-5 opacity-60" />
+              )}
+            </div>
+
             {/* Aviso de fotos extras */}
             {calculateExtraPhotos(selectedProject) > 0 && (
               <div className="flex items-center gap-3 p-4 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-700 dark:text-orange-400">
@@ -419,7 +481,15 @@ export default function ClienteGaleria() {
                     </div>
                     
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">{project.title}</CardTitle>
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="text-lg">{project.title}</CardTitle>
+                        <Badge 
+                          variant="outline" 
+                          className={cn("text-xs", statusColors[project.status] || statusColors.scheduled)}
+                        >
+                          {statusLabels[project.status] || 'Pendente'}
+                        </Badge>
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         {format(new Date(project.event_date), "dd 'de' MMMM, yyyy", { locale: ptBR })}
@@ -526,45 +596,74 @@ export default function ClienteGaleria() {
           <div className="flex-shrink-0 p-4 bg-black/90 border-t border-white/10">
             <div className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
               {/* Botão de seleção */}
-              <Button
-                size="lg"
-                variant={viewingPhoto.photo.is_selected ? "default" : "outline"}
-                className={cn(
-                  "gap-2 flex-shrink-0",
+              {canEditSelection(selectedProject) ? (
+                <Button
+                  size="lg"
+                  variant={viewingPhoto.photo.is_selected ? "default" : "outline"}
+                  className={cn(
+                    "gap-2 flex-shrink-0",
+                    viewingPhoto.photo.is_selected 
+                      ? "bg-green-500 hover:bg-green-600 text-white" 
+                      : "text-white border-white/50 hover:bg-white/10"
+                  )}
+                  onClick={() => handleToggleSelection(viewingPhoto.photo, selectedProject)}
+                >
+                  <Check className="h-5 w-5" />
+                  {viewingPhoto.photo.is_selected ? 'Selecionada' : 'Selecionar'}
+                </Button>
+              ) : (
+                <div className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md flex-shrink-0",
                   viewingPhoto.photo.is_selected 
-                    ? "bg-green-500 hover:bg-green-600 text-white" 
-                    : "text-white border-white/50 hover:bg-white/10"
-                )}
-                onClick={() => handleToggleSelection(viewingPhoto.photo, selectedProject)}
-              >
-                <Check className="h-5 w-5" />
-                {viewingPhoto.photo.is_selected ? 'Selecionada' : 'Selecionar'}
-              </Button>
-
-              {/* Campo de comentário */}
-              <div className="flex-1 space-y-1">
-                <label className="text-xs text-white/60">Comentário (opcional)</label>
-                <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Adicione um comentário..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 resize-none text-sm min-h-[60px]"
-                    rows={2}
-                  />
-                  <Button
-                    onClick={handleSaveComment}
-                    disabled={isSavingComment || comment === (viewingPhoto.photo.comment || '')}
-                    size="sm"
-                    className="self-end"
-                  >
-                    {isSavingComment ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      'Salvar'
-                    )}
-                  </Button>
+                    ? "bg-green-500/20 text-green-400 border border-green-500/30" 
+                    : "bg-white/5 text-white/50 border border-white/10"
+                )}>
+                  {viewingPhoto.photo.is_selected ? (
+                    <>
+                      <Check className="h-5 w-5" />
+                      <span>Selecionada</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-4 w-4" />
+                      <span>Não selecionada</span>
+                    </>
+                  )}
                 </div>
+              )}
+
+              {/* Campo de comentário (apenas leitura quando bloqueado) */}
+              <div className="flex-1 space-y-1">
+                <label className="text-xs text-white/60">
+                  Comentário {canEditSelection(selectedProject) ? '(opcional)' : ''}
+                </label>
+                {canEditSelection(selectedProject) ? (
+                  <div className="flex gap-2">
+                    <Textarea
+                      placeholder="Adicione um comentário..."
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40 resize-none text-sm min-h-[60px]"
+                      rows={2}
+                    />
+                    <Button
+                      onClick={handleSaveComment}
+                      disabled={isSavingComment || comment === (viewingPhoto.photo.comment || '')}
+                      size="sm"
+                      className="self-end"
+                    >
+                      {isSavingComment ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Salvar'
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="bg-white/5 border border-white/10 rounded-md p-3 text-sm text-white/70 min-h-[60px]">
+                    {viewingPhoto.photo.comment || 'Nenhum comentário'}
+                  </div>
+                )}
               </div>
             </div>
           </div>

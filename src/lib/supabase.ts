@@ -8,7 +8,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL e Anon Key são obrigatórios. Verifique o arquivo .env.local');
 }
 
-// Limpar instância antiga no hot reload
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     delete globalThis.__supabase;

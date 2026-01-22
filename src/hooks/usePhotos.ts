@@ -2,22 +2,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Photo, Album, InsertTables, UpdateTables } from '@/types/database';
 import { v4 as uuidv4 } from 'uuid';
+import { processImage, type WatermarkOptions } from '@/lib/imageProcessor';
 
 // Albums
 export function useAlbums(projectId?: string) {
   return useQuery({
     queryKey: ['albums', projectId],
     queryFn: async () => {
-      let query = supabase.from('albums').select('*').order('created_at', { ascending: false });
+      if (!projectId) return [];
       
-      if (projectId) {
-        query = query.eq('project_id', projectId);
-      }
+      const { data, error } = await supabase
+        .from('albums')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
       
-      const { data, error } = await query;
       if (error) throw error;
       return data as Album[];
     },
+    enabled: !!projectId, // Só executa se tiver projectId
   });
 }
 
@@ -63,16 +66,18 @@ export function usePhotos(albumId?: string) {
   return useQuery({
     queryKey: ['photos', albumId],
     queryFn: async () => {
-      let query = supabase.from('photos').select('*').order('sort_order', { ascending: true });
+      if (!albumId) return [];
       
-      if (albumId) {
-        query = query.eq('album_id', albumId);
-      }
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('album_id', albumId)
+        .order('sort_order', { ascending: true });
       
-      const { data, error } = await query;
       if (error) throw error;
       return data as Photo[];
     },
+    enabled: !!albumId, // Só executa se tiver albumId
   });
 }
 
@@ -144,19 +149,28 @@ export function useDeletePhoto() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      // Primeiro buscar a foto para pegar a URL
+      // Primeiro buscar a foto para pegar as URLs
       const { data: photo } = await supabase
         .from('photos')
-        .select('url')
+        .select('url, original_url')
         .eq('id', id)
         .single();
 
-      // Deletar do storage se existir
+      // Deletar ambas versões do storage se existirem
+      const pathsToDelete: string[] = [];
+      
       if (photo?.url) {
-        const path = photo.url.split('/project-photos/')[1];
-        if (path) {
-          await supabase.storage.from('project-photos').remove([path]);
-        }
+        const watermarkedPath = photo.url.split('/project-photos/')[1];
+        if (watermarkedPath) pathsToDelete.push(watermarkedPath);
+      }
+      
+      if (photo?.original_url) {
+        const originalPath = photo.original_url.split('/project-photos/')[1];
+        if (originalPath) pathsToDelete.push(originalPath);
+      }
+
+      if (pathsToDelete.length > 0) {
+        await supabase.storage.from('project-photos').remove(pathsToDelete);
       }
 
       const { error } = await supabase
@@ -168,56 +182,100 @@ export function useDeletePhoto() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['photos'] });
+      queryClient.invalidateQueries({ queryKey: ['client-projects-photos'] });
+      queryClient.invalidateQueries({ queryKey: ['client-projects-detail'] });
     },
   });
 }
 
-// Upload de fotos para o storage
+// Opções padrão para marca d'água
+const defaultWatermarkOptions: WatermarkOptions = {
+  text: 'STORYLENS',
+  position: 'diagonal',
+  opacity: 0.35,
+  color: '#ffffff',
+};
+
+// Upload de fotos para o storage (com conversão para WebP e marca d'água)
 export function useUploadPhotos() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ 
       albumId, 
-      files 
+      files,
+      watermarkOptions = defaultWatermarkOptions,
+      onProgress,
     }: { 
       albumId: string; 
       files: File[];
+      watermarkOptions?: WatermarkOptions;
+      onProgress?: (current: number, total: number, status: string) => void;
     }) => {
       const uploadedPhotos: Photo[] = [];
+      const total = files.length;
 
-      for (const file of files) {
-        // Gerar nome único para o arquivo
-        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-        const fileName = `${uuidv4()}.${fileExt}`;
-        const filePath = `${albumId}/${fileName}`;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const baseFileName = uuidv4();
+        
+        // Status: Processando imagem
+        onProgress?.(i, total, `Processando ${file.name}...`);
 
-        // Upload para o storage
-        const { error: uploadError } = await supabase.storage
+        // Processar imagem: converter para WebP e adicionar marca d'água
+        const processed = await processImage(file, watermarkOptions, 0.85);
+
+        // Status: Enviando
+        onProgress?.(i, total, `Enviando ${file.name}...`);
+
+        // Upload da imagem com marca d'água (para visualização do cliente)
+        const watermarkedPath = `${albumId}/${baseFileName}_watermarked.webp`;
+        const { error: watermarkedError } = await supabase.storage
           .from('project-photos')
-          .upload(filePath, file, {
+          .upload(watermarkedPath, processed.watermarkedBlob, {
             cacheControl: '3600',
             upsert: false,
+            contentType: 'image/webp',
           });
 
-        if (uploadError) {
-          console.error('Erro no upload:', uploadError);
-          throw uploadError;
+        if (watermarkedError) {
+          console.error('Erro no upload (marca dágua):', watermarkedError);
+          throw watermarkedError;
         }
 
-        // Obter URL pública
-        const { data: urlData } = supabase.storage
+        // Upload da imagem original (sem marca d'água, para download final)
+        const originalPath = `${albumId}/${baseFileName}_original.webp`;
+        const { error: originalError } = await supabase.storage
           .from('project-photos')
-          .getPublicUrl(filePath);
+          .upload(originalPath, processed.originalBlob, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'image/webp',
+          });
+
+        if (originalError) {
+          console.error('Erro no upload (original):', originalError);
+          throw originalError;
+        }
+
+        // Obter URLs públicas
+        const { data: watermarkedUrl } = supabase.storage
+          .from('project-photos')
+          .getPublicUrl(watermarkedPath);
+
+        const { data: originalUrl } = supabase.storage
+          .from('project-photos')
+          .getPublicUrl(originalPath);
 
         // Inserir registro na tabela photos
         const { data: photoData, error: insertError } = await supabase
           .from('photos')
           .insert({
             album_id: albumId,
-            url: urlData.publicUrl,
-            thumbnail_url: urlData.publicUrl,
-            filename: file.name,
+            url: watermarkedUrl.publicUrl,           // URL com marca d'água (exibida)
+            thumbnail_url: watermarkedUrl.publicUrl,  // Thumbnail (também com marca)
+            original_url: originalUrl.publicUrl,      // URL original (sem marca)
+            filename: file.name.replace(/\.[^.]+$/, '.webp'),
             is_selected: false,
             is_favorite: false,
           })
@@ -230,6 +288,7 @@ export function useUploadPhotos() {
         }
 
         uploadedPhotos.push(photoData as Photo);
+        onProgress?.(i + 1, total, `${i + 1}/${total} concluído`);
       }
 
       // Atualizar contagem de fotos no álbum
@@ -248,6 +307,8 @@ export function useUploadPhotos() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['photos', variables.albumId] });
       queryClient.invalidateQueries({ queryKey: ['albums'] });
+      queryClient.invalidateQueries({ queryKey: ['client-projects-photos'] });
+      queryClient.invalidateQueries({ queryKey: ['client-projects-detail'] });
     },
   });
 }

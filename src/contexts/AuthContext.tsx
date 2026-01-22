@@ -16,6 +16,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const STORAGE_KEY = 'app-auth';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -23,6 +27,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   
   const isFetchingProfile = useRef(false);
+
+  const fetchProfileDirect = async (userId: string, accessToken: string): Promise<Profile | null> => {
+    try {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${userId}`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${accessToken}`
+          }
+        }
+      );
+      const data = await response.json();
+      return data?.[0] || null;
+    } catch (err) {
+      console.error('Erro ao buscar perfil direto:', err);
+      return null;
+    }
+  };
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     if (isFetchingProfile.current) return profile;
@@ -72,21 +95,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (mounted) setIsLoading(false);
     };
 
-    // Listener para eventos de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log('Auth event:', event);
         
         if (!mounted) return;
 
-        // Qualquer evento com sessão inicializa o app
         if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !initialized) {
           await handleSession(newSession);
           return;
         }
 
         if (event === 'SIGNED_OUT') {
-          initialized = false; // Permitir reinicialização após logout
+          initialized = false;
           setUser(null);
           setProfile(null);
           setSession(null);
@@ -97,14 +118,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Fallback: se nenhum evento disparar em 3s, assume não logado
-    const timeout = setTimeout(() => {
+    // Fallback: usar sessão do storage diretamente após 2s
+    const timeout = setTimeout(async () => {
       if (mounted && !initialized) {
-        console.warn('Fallback: nenhum evento recebido, assumindo não logado');
+        console.warn('Fallback: usando sessão do storage');
         initialized = true;
-        setIsLoading(false);
+        
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const sessionData = JSON.parse(stored);
+            if (sessionData?.user && sessionData?.access_token) {
+              setSession(sessionData as Session);
+              setUser(sessionData.user as User);
+              
+              const profileData = await fetchProfileDirect(
+                sessionData.user.id, 
+                sessionData.access_token
+              );
+              if (mounted) setProfile(profileData);
+            }
+          }
+        } catch (err) {
+          console.error('Erro ao ler storage:', err);
+        }
+        
+        if (mounted) setIsLoading(false);
       }
-    }, 3000);
+    }, 2000);
 
     return () => {
       mounted = false;
@@ -136,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    localStorage.removeItem(STORAGE_KEY);
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
