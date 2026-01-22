@@ -78,21 +78,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let initialized = false;
 
     const handleSession = async (currentSession: Session | null) => {
-      if (!mounted || initialized) return;
+      if (!mounted) return;
+      
+      // Permitir re-inicialização se ainda estiver loading
+      if (initialized && !isLoading) return;
       initialized = true;
       
-      if (currentSession?.user) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-        const profileData = await fetchProfile(currentSession.user.id);
-        if (mounted) setProfile(profileData);
-      } else {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
+      try {
+        if (currentSession?.user) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          const profileData = await fetchProfile(currentSession.user.id);
+          if (mounted) setProfile(profileData);
+        } else {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error('Erro ao processar sessão:', error);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-      
-      if (mounted) setIsLoading(false);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -101,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (!mounted) return;
 
-        if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !initialized) {
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
           await handleSession(newSession);
           return;
         }
@@ -118,34 +125,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Fallback: usar sessão do storage diretamente após 2s
+    // Fallback: garantir que loading termine após 3s
     const timeout = setTimeout(async () => {
-      if (mounted && !initialized) {
-        console.warn('Fallback: usando sessão do storage');
-        initialized = true;
+      if (mounted && isLoading) {
+        console.warn('Fallback: verificando sessão após timeout');
         
         try {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          if (stored) {
-            const sessionData = JSON.parse(stored);
-            if (sessionData?.user && sessionData?.access_token) {
-              setSession(sessionData as Session);
-              setUser(sessionData.user as User);
-              
-              const profileData = await fetchProfileDirect(
-                sessionData.user.id, 
-                sessionData.access_token
-              );
-              if (mounted) setProfile(profileData);
-            }
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          
+          if (currentSession?.user) {
+            setSession(currentSession);
+            setUser(currentSession.user);
+            
+            const profileData = await fetchProfile(currentSession.user.id);
+            if (mounted) setProfile(profileData);
           }
         } catch (err) {
-          console.error('Erro ao ler storage:', err);
+          console.error('Erro ao verificar sessão:', err);
         }
         
         if (mounted) setIsLoading(false);
       }
-    }, 2000);
+    }, 3000);
 
     return () => {
       mounted = false;
