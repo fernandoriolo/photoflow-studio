@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,10 +22,12 @@ import {
   MapPin,
   Clock,
   DollarSign,
+  Plus,
 } from 'lucide-react';
 import { format, parseISO, isPast, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { NewProjectModal } from '@/components/projects/NewProjectModal';
 
 interface ClientProfileModalProps {
   client: Client | null;
@@ -51,6 +54,7 @@ export function ClientProfileModal({ client, open, onClose }: ClientProfileModal
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
   useEffect(() => {
     if (client && open) {
@@ -229,6 +233,16 @@ export function ClientProfileModal({ client, open, onClose }: ClientProfileModal
               </TabsList>
 
               <TabsContent value="projects" className="mt-4">
+                <div className="flex justify-end mb-3">
+                  <Button 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => setIsNewProjectModalOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Novo Projeto
+                  </Button>
+                </div>
                 {projects.length > 0 ? (
                   <div className="space-y-3">
                     {projects.map((project) => (
@@ -274,6 +288,7 @@ export function ClientProfileModal({ client, open, onClose }: ClientProfileModal
                   <div className="py-8 text-center text-muted-foreground">
                     <Camera className="h-10 w-10 mx-auto mb-3 opacity-50" />
                     <p>Nenhum projeto registrado</p>
+                    <p className="text-sm mt-1">Clique no botão acima para criar o primeiro projeto</p>
                   </div>
                 )}
               </TabsContent>
@@ -326,6 +341,16 @@ export function ClientProfileModal({ client, open, onClose }: ClientProfileModal
         )}
       </div>
       </DialogContent>
+
+      {/* Modal de Novo Projeto */}
+      {client && (
+        <NewProjectModal
+          open={isNewProjectModalOpen}
+          onClose={() => setIsNewProjectModalOpen(false)}
+          client={client}
+          onSuccess={fetchClientData}
+        />
+      )}
     </Dialog>
   );
 }

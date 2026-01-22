@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Profile, UserRole } from '@/types/database';
 
@@ -21,8 +21,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const isFetchingProfile = useRef(false);
 
-  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    if (isFetchingProfile.current) return null;
+    isFetchingProfile.current = true;
+    
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -30,114 +35,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .single();
 
+      isFetchingProfile.current = false;
+      
       if (error) {
         console.error('Erro ao buscar perfil:', error);
-        // Se for erro de autenticação, limpar sessão
-        if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
-          await supabase.auth.signOut();
-        }
         return null;
       }
 
       return data as Profile;
     } catch (err) {
+      isFetchingProfile.current = false;
       console.error('Erro inesperado ao buscar perfil:', err);
       return null;
     }
-  }, []);
-
-  const clearAuthState = useCallback(() => {
-    setUser(null);
-    setProfile(null);
-    setSession(null);
-    setIsLoading(false);
-  }, []);
+  };
 
   useEffect(() => {
     let mounted = true;
 
-    // Timeout de segurança para evitar loading infinito
-    const timeout = setTimeout(() => {
-      if (mounted && isLoading) {
-        console.warn('Timeout de autenticação - limpando estado');
-        clearAuthState();
-      }
-    }, 10000); // 10 segundos máximo
-
-    // Verificar sessão inicial
+    // 1. Buscar sessão inicial
     const initSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error('Erro ao obter sessão:', error);
-          if (mounted) clearAuthState();
-          return;
-        }
-
         if (!mounted) return;
-
-        if (session?.user) {
-          setSession(session);
-          setUser(session.user);
-          const profileData = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(profileData);
-            setIsLoading(false);
-          }
-        } else {
-          clearAuthState();
+        
+        if (currentSession?.user) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          const profileData = await fetchProfile(currentSession.user.id);
+          if (mounted) setProfile(profileData);
         }
+        
+        if (mounted) setIsLoading(false);
       } catch (err) {
-        console.error('Erro ao inicializar sessão:', err);
-        if (mounted) clearAuthState();
+        console.error('Erro ao inicializar:', err);
+        if (mounted) setIsLoading(false);
       }
     };
 
     initSession();
 
-    // Escutar mudanças de autenticação
+    // 2. Listener para mudanças
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session) => {
+      async (event, newSession) => {
+        console.log('Auth event:', event);
+        
         if (!mounted) return;
 
-        console.log('Auth event:', event);
-
-        // Se a sessão expirou ou foi invalidada
-        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
-          clearAuthState();
-          return;
-        }
-
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(profileData);
-          }
-        } else {
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
           setProfile(null);
+          setSession(null);
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (newSession?.user) {
+            setSession(newSession);
+            setUser(newSession.user);
+            const profileData = await fetchProfile(newSession.user.id);
+            if (mounted) setProfile(profileData);
+          }
         }
-        
-        if (mounted) setIsLoading(false);
       }
     );
 
     return () => {
       mounted = false;
-      clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [fetchProfile, clearAuthState]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
     return { error: error as Error | null };
   };
 
@@ -152,23 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
-
     return { error: error as Error | null };
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('Erro ao fazer logout:', err);
-    } finally {
-      // Sempre limpar o estado local, mesmo se o signOut falhar
-      setUser(null);
-      setProfile(null);
-      setSession(null);
-      // Limpar storage do Supabase
-      localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token');
-    }
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+    setSession(null);
   };
 
   const hasAccess = (requiredRoles: UserRole[]) => {
@@ -201,4 +163,3 @@ export function useAuth() {
   }
   return context;
 }
-

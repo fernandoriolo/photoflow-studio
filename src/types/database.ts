@@ -345,6 +345,138 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          id: string
+          email: string
+          name: string | null
+          avatar_url: string | null
+          role: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id: string
+          email: string
+          name?: string | null
+          avatar_url?: string | null
+          role?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          email?: string
+          name?: string | null
+          avatar_url?: string | null
+          role?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_categories: {
+        Row: {
+          id: string
+          name: string
+          type: string
+          color: string | null
+          icon: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          type: string
+          color?: string | null
+          icon?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          type?: string
+          color?: string | null
+          icon?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          id: string
+          description: string
+          amount: number
+          type: string
+          category_id: string | null
+          project_id: string | null
+          client_id: string | null
+          date: string
+          payment_method: string | null
+          status: string
+          notes: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          description: string
+          amount: number
+          type: string
+          category_id?: string | null
+          project_id?: string | null
+          client_id?: string | null
+          date?: string
+          payment_method?: string | null
+          status?: string
+          notes?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          description?: string
+          amount?: number
+          type?: string
+          category_id?: string | null
+          project_id?: string | null
+          client_id?: string | null
+          date?: string
+          payment_method?: string | null
+          status?: string
+          notes?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -375,6 +507,9 @@ export type Photo = Tables<'photos'>
 export type Quote = Tables<'quotes'>
 export type QuoteItem = Tables<'quote_items'>
 export type CalendarEvent = Tables<'calendar_events'>
+export type ProfileRow = Tables<'profiles'>
+export type FinanceCategoryRow = Tables<'finance_categories'>
+export type TransactionRow = Tables<'transactions'>
 
 // Status types
 export type LeadStatus = 'new' | 'negotiation' | 'sent' | 'closed'

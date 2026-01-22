@@ -15,8 +15,9 @@ import type { Lead, LeadStatus } from '@/types/database';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, UserPlus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NewClientModal } from '@/components/clients/NewClientModal';
 
 const columns: { status: LeadStatus; title: string }[] = [
   { status: 'new', title: 'Novos' },
@@ -29,6 +30,7 @@ export function KanbanBoard() {
   const { data: leads = [], isLoading, error } = useLeads();
   const updateStatus = useUpdateLeadStatus();
   const [activeCard, setActiveCard] = useState<Lead | null>(null);
+  const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
 
   // Log de erro para debug
   if (error) console.error('Erro ao carregar leads:', error);
@@ -130,10 +132,16 @@ export function KanbanBoard() {
               {leads.length} leads no pipeline
             </p>
           </div>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo Lead
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setIsNewClientModalOpen(true)}>
+              <UserPlus className="h-4 w-4" />
+              Novo Cliente
+            </Button>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Lead
+            </Button>
+          </div>
         </div>
 
         {/* Board Columns */}
@@ -166,6 +174,12 @@ export function KanbanBoard() {
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Modal de Novo Cliente */}
+      <NewClientModal
+        open={isNewClientModalOpen}
+        onClose={() => setIsNewClientModalOpen(false)}
+      />
     </DndContext>
   );
 }

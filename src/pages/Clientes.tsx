@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ClientProfileModal } from '@/components/clients/ClientProfileModal';
+import { NewClientModal } from '@/components/clients/NewClientModal';
 import type { Client } from '@/types/database';
 
 export default function Clientes() {
@@ -32,6 +33,7 @@ export default function Clientes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
 
   // Filtrar clientes pela busca
   const filteredClients = useMemo(() => {
@@ -113,7 +115,7 @@ export default function Clientes() {
               className="w-full pl-9 sm:w-80 bg-card border-0 shadow-soft"
             />
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => setIsNewClientModalOpen(true)}>
             <Plus className="h-4 w-4" />
             Novo Cliente
           </Button>
@@ -238,6 +240,12 @@ export default function Clientes() {
         client={selectedClient}
         open={isProfileModalOpen}
         onClose={handleCloseProfile}
+      />
+
+      {/* Modal de Novo Cliente */}
+      <NewClientModal
+        open={isNewClientModalOpen}
+        onClose={() => setIsNewClientModalOpen(false)}
       />
     </DashboardLayout>
   );
