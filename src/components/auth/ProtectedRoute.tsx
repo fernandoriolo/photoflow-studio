@@ -26,10 +26,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
-  // Se roles específicas são requeridas, verificar
   if (allowedRoles && profile) {
     if (!allowedRoles.includes(profile.role)) {
-      // Redirecionar baseado no role
       if (profile.role === 'cliente') {
         return <Navigate to="/galerias" replace />;
       }
@@ -39,4 +37,3 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   return <>{children}</>;
 }
-

@@ -8,13 +8,27 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL e Anon Key são obrigatórios. Verifique o arquivo .env.local');
 }
 
-// Singleton para evitar múltiplas instâncias no hot reload
+// Limpar instância antiga no hot reload
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    delete globalThis.__supabase;
+  });
+}
+
+function createSupabaseClient(): SupabaseClient<Database> {
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      storageKey: 'app-auth',
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
+}
+
 declare global {
   var __supabase: SupabaseClient<Database> | undefined;
 }
 
-export const supabase = globalThis.__supabase ?? createClient<Database>(supabaseUrl, supabaseAnonKey);
-
-if (import.meta.env.DEV) {
-  globalThis.__supabase = supabase;
-}
+export const supabase = globalThis.__supabase ?? createSupabaseClient();
+globalThis.__supabase = supabase;
